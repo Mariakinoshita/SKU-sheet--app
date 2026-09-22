@@ -1,0 +1,5 @@
+﻿store.env
+wunderhorse.env
+*.env
+venv/
+__pycache__/

@@ -17,12 +17,17 @@ RELEASE_DATE_NAMESPACE = "custom"
 RELEASE_DATE_KEY = "release_date"
 
 
-def get_credentials(env_file):
+def get_credentials(store_choice, env_file):
+    """Reads Shopify credentials for the selected store from Streamlit
+    secrets (when deployed, using a [StoreName] section per store) or
+    from the given local .env file (when run locally)."""
     try:
-        domain = st.secrets["SHOPIFY_STORE_DOMAIN"]
-        client_id = st.secrets["SHOPIFY_CLIENT_ID"]
-        client_secret = st.secrets["SHOPIFY_CLIENT_SECRET"]
-        return domain, client_id, client_secret
+        store_secrets = st.secrets[store_choice]
+        return (
+            store_secrets["SHOPIFY_STORE_DOMAIN"],
+            store_secrets["SHOPIFY_CLIENT_ID"],
+            store_secrets["SHOPIFY_CLIENT_SECRET"],
+        )
     except Exception:
         from dotenv import load_dotenv
         load_dotenv(env_file, override=True)
@@ -158,7 +163,7 @@ if st.button("Generate SKU Sheet", type="primary"):
     if not titles:
         st.warning("Add at least one product title first.")
     else:
-        domain, client_id, client_secret = get_credentials(env_file)
+        domain, client_id, client_secret = get_credentials(store_choice, env_file)
         if not all([domain, client_id, client_secret]):
             st.error("Missing Shopify credentials - check your secrets/env setup.")
         else:

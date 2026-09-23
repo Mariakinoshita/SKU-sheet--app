@@ -1,4 +1,4 @@
-"""
+﻿"""
 app.py - Streamlit web interface for the SKU sheet generator.
 """
 
@@ -18,9 +18,6 @@ RELEASE_DATE_KEY = "release_date"
 
 
 def get_credentials(store_choice, env_file):
-    """Reads Shopify credentials for the selected store from Streamlit
-    secrets (when deployed, using a [StoreName] section per store) or
-    from the given local .env file (when run locally)."""
     try:
         store_secrets = st.secrets[store_choice]
         return (
@@ -74,6 +71,7 @@ query searchProduct($search: String!) {
               sku
               title
               price
+              barcode
               image {
                 url
               }
@@ -113,7 +111,7 @@ def find_product(domain, token, title_query):
     return data["data"]["products"]["edges"], None
 
 
-def build_rows(product):
+def build_rows(product, include_barcode=False):
     rows = []
     title = product["title"]
     release_date = product["metafield"]["value"] if product.get("metafield") else ""
@@ -133,10 +131,13 @@ def build_rows(product):
         origin = country_name(item["countryCodeOfOrigin"] if item else "")
         image = v["image"]["url"] if v.get("image") else product_image
 
-        rows.append([
+        row = [
             v["sku"], sku_name, cost, v["price"],
             release_date, hs_code, origin, image,
-        ])
+        ]
+        if include_barcode:
+            row.append(v.get("barcode") or "")
+        rows.append(row)
     return rows
 
 
@@ -158,6 +159,8 @@ titles_input = st.text_area(
     height=200,
     placeholder="Team McFly Black Hoodie\nPower To Play | CD\n...",
 )
+
+include_barcode = st.checkbox("Include Barcode column (music items only)")
 
 if st.button("Generate SKU Sheet", type="primary"):
     titles = [t.strip() for t in titles_input.splitlines() if t.strip()]
@@ -195,7 +198,7 @@ if st.button("Generate SKU Sheet", type="primary"):
                     else:
                         product = matches[0]["node"]
 
-                    all_rows.extend(build_rows(product))
+                    all_rows.extend(build_rows(product, include_barcode))
 
             if not_found:
                 st.warning(f"No match found for: {(', ').join(not_found)}")
@@ -208,6 +211,8 @@ if st.button("Generate SKU Sheet", type="primary"):
                 ws.title = "SKU Sheet"
                 headers = ["SKU", "SKU Name", "Purchase Price", "Retail Price",
                            "Release Date", "HS Tariff Code", "Country of Manufacture", "IMAGE"]
+                if include_barcode:
+                    headers.append("Barcode")
                 ws.append(headers)
                 for cell in ws[1]:
                     cell.font = Font(bold=True)
@@ -231,5 +236,3 @@ if st.button("Generate SKU Sheet", type="primary"):
                 )
             else:
                 st.error("No rows generated - check the product titles above.")
-
-

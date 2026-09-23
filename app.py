@@ -184,9 +184,17 @@ if st.button("Generate SKU Sheet", type="primary"):
                     if not matches:
                         not_found.append(title)
                         continue
-                    if len(matches) > 1:
+
+                    exact = [m for m in matches if m["node"]["title"].strip().lower() == title.strip().lower()]
+
+                    if exact:
+                        product = exact[0]["node"]
+                    elif len(matches) > 1:
                         ambiguous.append((title, [m["node"]["title"] for m in matches]))
-                    product = matches[0]["node"]
+                        product = matches[0]["node"]
+                    else:
+                        product = matches[0]["node"]
+
                     all_rows.extend(build_rows(product))
 
             if not_found:
@@ -223,4 +231,5 @@ if st.button("Generate SKU Sheet", type="primary"):
                 )
             else:
                 st.error("No rows generated - check the product titles above.")
+
 

@@ -147,6 +147,7 @@ st.write("Pick a store, paste in product titles (one per line), then generate a 
 STORES = {
     "McFly": "store.env",
     "Wunderhorse UK": "wunderhorse.env",
+    "Queen UK": "queen.env",
 }
 store_choice = st.selectbox("Store", list(STORES.keys()))
 env_file = STORES[store_choice]

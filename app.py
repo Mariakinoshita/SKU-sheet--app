@@ -1,9 +1,10 @@
-"""
+﻿"""
 app.py - Streamlit web interface for the SKU sheet generator.
 """
 
 import io
 import os
+import re
 from datetime import datetime
 
 import requests
@@ -53,6 +54,12 @@ def country_name(code):
     return country.name if country else code
 
 
+def normalize(text):
+    """Lowercase and strip everything except letters and digits, so
+    'CTRL | CD' and 'CTRL - CD' compare as equal."""
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
 SEARCH_QUERY = """
 query searchProduct($search: String!) {
   products(first: 5, query: $search) {
@@ -92,7 +99,7 @@ query searchProduct($search: String!) {
 """ % (RELEASE_DATE_NAMESPACE, RELEASE_DATE_KEY)
 
 
-def find_product(domain, token, title_query):
+def run_search(domain, token, search_string):
     url = f"https://{domain}/admin/api/{API_VERSION}/graphql.json"
     headers = {
         "X-Shopify-Access-Token": token,
@@ -100,7 +107,7 @@ def find_product(domain, token, title_query):
     }
     resp = requests.post(url, headers=headers, json={
         "query": SEARCH_QUERY,
-        "variables": {"search": f"title:*{title_query}*"},
+        "variables": {"search": search_string},
     })
     resp.raise_for_status()
     data = resp.json()
@@ -109,6 +116,20 @@ def find_product(domain, token, title_query):
         return None, data["errors"]
 
     return data["data"]["products"]["edges"], None
+
+
+def find_product(domain, token, title_query):
+    return run_search(domain, token, f"title:*{title_query}*")
+
+
+def find_similar(domain, token, title_query):
+    """Fallback when the first search finds nothing: search on the
+    individual words only, ignoring punctuation such as '|'."""
+    words = re.findall(r"[A-Za-z0-9]+", title_query)
+    if not words:
+        return [], None
+    search = " ".join(f"title:{w}*" for w in words)
+    return run_search(domain, token, search)
 
 
 def build_rows(product, include_barcode=False):
@@ -196,14 +217,27 @@ if st.button("Generate SKU Sheet", type="primary"):
                 all_rows = []
                 not_found = []
                 ambiguous = []
+                suggestions = {}
 
                 for title in titles:
                     matches, errors = find_product(domain, token, title)
                     if errors:
                         st.error(f"Error looking up '{title}': {errors}")
                         continue
+
                     if not matches:
-                        not_found.append(title)
+                        # Second attempt: search on the words only, then accept
+                        # a product whose title matches ignoring punctuation.
+                        similar, _ = find_similar(domain, token, title)
+                        similar = similar or []
+                        target = normalize(title)
+                        close = [m for m in similar if normalize(m["node"]["title"]) == target]
+                        if close:
+                            all_rows.extend(build_rows(close[0]["node"], include_barcode))
+                        else:
+                            not_found.append(title)
+                            if similar:
+                                suggestions[title] = [m["node"]["title"] for m in similar]
                         continue
 
                     exact = [m for m in matches if m["node"]["title"].strip().lower() == title.strip().lower()]
@@ -220,6 +254,8 @@ if st.button("Generate SKU Sheet", type="primary"):
 
             if not_found:
                 st.warning(f"No match found for: {(', ').join(not_found)}")
+            for title, options in suggestions.items():
+                st.info(f"Closest titles in this store for '{title}': {(' ; ').join(options)}")
             for title, options in ambiguous:
                 st.info(f"'{title}' matched multiple products - used the first ({options[0]}). Other matches: {(', ').join(options[1:])}")
 
@@ -254,18 +290,3 @@ if st.button("Generate SKU Sheet", type="primary"):
                 )
             else:
                 st.error("No rows generated - check the product titles above.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

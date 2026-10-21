@@ -195,6 +195,7 @@ STORES = {
     "Simply Red UK": "simplyred.env",
     "BMTH UK": "bmth.env",
     "Roger Taylor UK": "rogertaylor.env",
+    "Miles Kane": "mileskane.env",
 }
 store_choice = st.selectbox("Store", list(STORES.keys()))
 env_file = STORES[store_choice]
@@ -296,6 +297,7 @@ if st.button("Generate SKU Sheet", type="primary"):
                 )
             else:
                 st.error("No rows generated - check the product titles above.")
+
 
 
 

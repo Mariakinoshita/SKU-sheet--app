@@ -1,4 +1,4 @@
-"""
+﻿"""
 app.py - Streamlit web interface for the SKU sheet generator.
 """
 
@@ -207,6 +207,7 @@ STORES = {
     "Lainey Wilson UK": "laineywilsonuk.env",
     "Arcade Fire UK": "arcadefire.env",
     "Royal Blood UK": "royalblood.env",
+    "Tyla UK": "tyla.env",
 }
 store_choice = st.selectbox("Store", list(STORES.keys()))
 env_file = STORES[store_choice]

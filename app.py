@@ -1,4 +1,4 @@
-﻿"""
+"""
 app.py - Streamlit web interface for the SKU sheet generator.
 """
 
@@ -207,7 +207,7 @@ STORES = {
     "Lainey Wilson UK": "laineywilsonuk.env",
     "Arcade Fire UK": "arcadefire.env",
     "Royal Blood UK": "royalblood.env",
-    "Tyla UK": "tyla.env",
+    "Steps Music": "stepsmusic.env",
 }
 store_choice = st.selectbox("Store", list(STORES.keys()))
 env_file = STORES[store_choice]
@@ -309,6 +309,7 @@ if st.button("Generate SKU Sheet", type="primary"):
                 )
             else:
                 st.error("No rows generated - check the product titles above.")
+
 
 
 
